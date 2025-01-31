@@ -10,7 +10,8 @@ A Flutter plugin that provides access to the native iOS 14+ color picker.
   s.author           = { 'Your Name' => 'your.email@example.com' }
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
-  s.platform = :ios, '14.0'
+  s.ios.deployment_target = '14.0'
+  s.osx.deployment_target = '10.15'
   s.dependency 'Flutter'
   s.swift_version = '5.0'
 

@@ -105,9 +105,9 @@ Converts the ColorModel to a map containing RGBA values.
 | Platform | Support |
 |----------|----------|
 | iOS      | iOS 14+  |
+| macOS    | 10.15+   |
 | Android  | ❌       |
 | Web      | ❌       |
-| macOS    | ❌       |
 | Windows  | ❌       |
 | Linux    | ❌       |
 
