@@ -57,11 +57,9 @@ try {
 
 ### Screenshots
 
-#### iOS Color Picker
-![iOS Color Picker](assets/iphone.png)
+<img src="https://github.com/squirelboy360/flutter-native-color-picker-plugin/blob/main/assets/iphone.png" width="300" alt="iOS Color Picker"/>
 
-#### macOS Color Picker
-![macOS Color Picker](assets/macos.png)
+<img src="https://github.com/squirelboy360/flutter-native-color-picker-plugin/blob/main/assets/macos.png" width="300" alt="macOS Color Picker"/>
 
 ### Using with ColorModel
 
