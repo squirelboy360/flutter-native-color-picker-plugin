@@ -3,43 +3,63 @@ import UIKit
 
 @available(iOS 14.0, *)
 public class SwiftNativeIosColorPickerPlugin: NSObject, FlutterPlugin {
+    private var eventSink: FlutterEventSink?
+    private var flutterResult: FlutterResult?
+
     public static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: "native_ios_color_picker", binaryMessenger: registrar.messenger())
+        let methodChannel = FlutterMethodChannel(name: "native_ios_color_picker", binaryMessenger: registrar.messenger())
         let instance = SwiftNativeIosColorPickerPlugin()
-        registrar.addMethodCallDelegate(instance, channel: channel)
+        registrar.addMethodCallDelegate(instance, channel: methodChannel)
+
+        let eventChannel = FlutterEventChannel(name: "native_ios_color_picker/events", binaryMessenger: registrar.messenger())
+        eventChannel.setStreamHandler(instance)
     }
-    
+
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "showColorPicker":
-            showColorPicker(result: result)
+            showColorPicker()
+            result(nil) // Picker is being shown, no immediate result
         default:
             result(FlutterMethodNotImplemented)
         }
     }
-    
-    private func showColorPicker(result: @escaping FlutterResult) {
+
+    private func showColorPicker() {
         DispatchQueue.main.async {
             guard let viewController = UIApplication.shared.windows.first?.rootViewController else {
-                result(FlutterError(code: "NO_VIEWCONTROLLER",
-                                  message: "Could not get root view controller",
-                                  details: nil))
                 return
             }
-            
+
             let colorPicker = UIColorPickerViewController()
             colorPicker.delegate = self
-            self.flutterResult = result
             viewController.present(colorPicker, animated: true)
         }
     }
-    
-    private var flutterResult: FlutterResult?
+}
+
+@available(iOS 14.0, *)
+extension SwiftNativeIosColorPickerPlugin: FlutterStreamHandler {
+    public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
+        return nil
+    }
+
+    public func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        self.eventSink = nil
+        return nil
+    }
 }
 
 @available(iOS 14.0, *)
 extension SwiftNativeIosColorPickerPlugin: UIColorPickerViewControllerDelegate {
     public func colorPickerViewControllerDidFinish(_ viewController: UIColorPickerViewController) {
+        // Nothing to do – picker is dismissed, but live updates already sent via eventSink
+    }
+
+    public func colorPickerViewControllerDidSelectColor(_ viewController: UIColorPickerViewController) {
+        guard let sink = eventSink else { return }
+
         let color = viewController.selectedColor
         let colorDict: [String: Any] = [
             "red": Double(color.components.red),
@@ -47,12 +67,8 @@ extension SwiftNativeIosColorPickerPlugin: UIColorPickerViewControllerDelegate {
             "blue": Double(color.components.blue),
             "alpha": Double(color.components.alpha)
         ]
-        flutterResult?(colorDict)
-        flutterResult = nil
-    }
-    
-    public func colorPickerViewControllerDidSelectColor(_ viewController: UIColorPickerViewController) {
-        // Optional: Handle color selection changes in real-time
+
+        sink(colorDict) // live send to Flutter
     }
 }
 

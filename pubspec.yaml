@@ -1,6 +1,6 @@
 name: native_ios_color_picker
 description: "A Flutter plugin that provides a native iOS and macOS color picker interface."
-version: 0.0.1
+version: 0.0.2
 homepage: https://github.com/squirelboy360/flutter-iOS-color-picker-plugin
 repository: https://github.com/squirelboy360/flutter-iOS-color-picker-plugin
 
