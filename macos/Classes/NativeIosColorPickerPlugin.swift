@@ -1,47 +1,25 @@
-import FlutterMacOS
-import AppKit
+import 'dart:async';
+import 'package:flutter/services.dart';
 
-@available(macOS 10.15, *)
-public class NativeIosColorPickerPlugin: NSObject, FlutterPlugin {
-    public static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: "native_ios_color_picker", binaryMessenger: registrar.messenger)
-        let instance = NativeIosColorPickerPlugin()
-        registrar.addMethodCallDelegate(instance, channel: channel)
+class NativeIosColorPicker {
+  static const MethodChannel _channel =
+      MethodChannel('native_ios_color_picker');
+
+  static const EventChannel _eventChannel =
+      EventChannel('native_ios_color_picker/events');
+
+  /// Shows the native macOS color picker window.
+  /// Color changes are streamed via [onColorChanged].
+  static Future<void> showColorPicker() async {
+    try {
+      await _channel.invokeMethod('showColorPicker');
+    } on PlatformException catch (e) {
+      throw 'Failed to show color picker: ${e.message}';
     }
-    
-    public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        switch call.method {
-        case "showColorPicker":
-            showColorPicker(result: result)
-        default:
-            result(FlutterMethodNotImplemented)
-        }
-    }
-    
-    private func showColorPicker(result: @escaping FlutterResult) {
-        DispatchQueue.main.async {
-            let colorPanel = NSColorPanel.shared
-            colorPanel.setTarget(self)
-            colorPanel.setAction(#selector(self.colorChanged(_:)))
-            colorPanel.makeKeyAndOrderFront(nil)
-            self.flutterResult = result
-        }
-    }
-    
-    private var flutterResult: FlutterResult?
-    
-    @objc private func colorChanged(_ sender: NSColorPanel) {
-        guard let color = sender.color.usingColorSpace(.deviceRGB) else { return }
-        
-        let colorDict: [String: Any] = [
-            "red": color.redComponent,
-            "green": color.greenComponent,
-            "blue": color.blueComponent,
-            "alpha": color.alphaComponent
-        ]
-        
-        flutterResult?(colorDict)
-        flutterResult = nil
-        sender.close()
-    }
+  }
+
+  /// Live stream of RGBA color updates from native macOS picker.
+  static Stream<Map<dynamic, dynamic>> get onColorChanged {
+    return _eventChannel.receiveBroadcastStream().cast<Map<dynamic, dynamic>>();
+  }
 }

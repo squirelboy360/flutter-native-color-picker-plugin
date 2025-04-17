@@ -13,17 +13,17 @@ class ColorModel {
     this.alpha = 1.0,
   });
 
-  /// Creates a [ColorModel] from a map containing RGBA values.
-  factory ColorModel.fromMap(Map<String, double> map) {
+  /// Tworzy ColorModel z mapy, niezależnie od typu dynamicznego.
+  factory ColorModel.fromMap(Map<String, dynamic> map) {
     return ColorModel(
-      red: map['red'] ?? 0.0,
-      green: map['green'] ?? 0.0,
-      blue: map['blue'] ?? 0.0,
-      alpha: map['alpha'] ?? 1.0,
+      red: (map['red'] ?? 0.0).toDouble(),
+      green: (map['green'] ?? 0.0).toDouble(),
+      blue: (map['blue'] ?? 0.0).toDouble(),
+      alpha: (map['alpha'] ?? 1.0).toDouble(),
     );
   }
 
-  /// Converts the color model to a Flutter [Color].
+  /// Konwertuje model na Flutterowy Color.
   Color toColor() {
     return Color.fromRGBO(
       (red * 255).round(),
@@ -33,7 +33,7 @@ class ColorModel {
     );
   }
 
-  /// Converts the color model to a map representation.
+  /// Konwertuje model z powrotem na mapę.
   Map<String, double> toMap() {
     return {
       'red': red,
