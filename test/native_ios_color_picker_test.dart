@@ -1,7 +1,27 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:native_ios_color_picker/native_ios_color_picker.dart';
-import 'package:native_ios_color_picker/src/color_model.dart';
+
+// Helper class for mocking the stream handler
+class _TestMockStreamHandler implements MockStreamHandler {
+  final StreamController<Map<dynamic, dynamic>> controller;
+
+  _TestMockStreamHandler(this.controller);
+
+  @override
+  void onListen(dynamic arguments, MockStreamHandlerEventSink events) { // Correct sink type
+    controller.stream.listen(events.success, onError: events.error, onDone: events.endOfStream);
+  }
+
+  @override
+  dynamic onCancel(dynamic arguments) {
+    // Handle cancellation if needed
+    return null;
+  }
+}
+
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -9,34 +29,48 @@ void main() {
   group('NativeIosColorPicker', () {
     const MethodChannel channel = MethodChannel('native_ios_color_picker');
     final List<MethodCall> log = <MethodCall>[];
+    const EventChannel eventChannel = EventChannel('native_ios_color_picker/events');
+    late StreamController<Map<dynamic, dynamic>> eventController;
 
     setUp(() {
+      // Mock the method channel
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
         channel,
         (MethodCall methodCall) async {
           log.add(methodCall);
-          return {'red': 0.5, 'green': 0.3, 'blue': 0.7, 'alpha': 1.0};
+          // showColorPicker on the method channel doesn't return a value,
+          // it triggers the native UI. Color updates come via the event channel.
+          return null;
         },
       );
+
+      // Mock the event channel
+      eventController = StreamController<Map<dynamic, dynamic>>.broadcast();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockStreamHandler(eventChannel, _TestMockStreamHandler(eventController)); // Use the helper class
     });
 
     tearDown(() {
+      // Clean up method channel mock
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, null);
       log.clear();
+
+      // Clean up event channel mock
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockStreamHandler(eventChannel, null);
+      eventController.close();
     });
 
-    test('showColorPicker returns color values', () async {
-      final result = await NativeIosColorPicker.showColorPicker();
+    test('showColorPicker invokes the method channel', () async {
+      // Call the method
+      await NativeIosColorPicker.showColorPicker();
 
+      // Verify the method was called on the channel
       expect(log, hasLength(1));
       expect(log.single.method, 'showColorPicker');
-
-      expect(result['red'], 0.5);
-      expect(result['green'], 0.3);
-      expect(result['blue'], 0.7);
-      expect(result['alpha'], 1.0);
+      // No need to check the result, as it's void/null
     });
 
     test('showColorPicker throws on platform exception', () async {
@@ -60,6 +94,28 @@ void main() {
         )),
       );
     });
+
+    test('onColorChanged receives color updates from event channel', () async {
+      // Arrange: Define the expected color map
+      final expectedColorMap = {
+        'red': 0.1,
+        'green': 0.2,
+        'blue': 0.9,
+        'alpha': 0.8,
+      };
+
+      // Act: Listen to the stream and emit a value from the mock controller
+      final stream = NativeIosColorPicker.onColorChanged;
+      final futureColor = stream.first; // Get the first event
+
+      // Simulate native code sending an event
+      eventController.add(expectedColorMap);
+
+      // Assert: Check if the received color map matches the expected one
+      final receivedColorMap = await futureColor;
+      expect(receivedColorMap, equals(expectedColorMap));
+    });
+
   });
 
   group('ColorModel', () {
