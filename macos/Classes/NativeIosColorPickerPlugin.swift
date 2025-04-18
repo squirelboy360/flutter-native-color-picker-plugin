@@ -1,25 +1,64 @@
-import 'dart:async';
-import 'package:flutter/services.dart';
+import FlutterMacOS
+import AppKit
 
-class NativeIosColorPicker {
-  static const MethodChannel _channel =
-      MethodChannel('native_ios_color_picker');
+@available(macOS 10.15, *)
+public class NativeIosColorPickerPlugin: NSObject, FlutterPlugin {
+    private var eventSink: FlutterEventSink?
 
-  static const EventChannel _eventChannel =
-      EventChannel('native_ios_color_picker/events');
+    public static func register(with registrar: FlutterPluginRegistrar) {
+        // Method channel (still required for triggering picker)
+        let methodChannel = FlutterMethodChannel(name: "native_ios_color_picker", binaryMessenger: registrar.messenger)
+        let instance = NativeIosColorPickerPlugin()
+        registrar.addMethodCallDelegate(instance, channel: methodChannel)
 
-  /// Shows the native macOS color picker window.
-  /// Color changes are streamed via [onColorChanged].
-  static Future<void> showColorPicker() async {
-    try {
-      await _channel.invokeMethod('showColorPicker');
-    } on PlatformException catch (e) {
-      throw 'Failed to show color picker: ${e.message}';
+        // Event channel (for continuous color updates)
+        let eventChannel = FlutterEventChannel(name: "native_ios_color_picker/events", binaryMessenger: registrar.messenger)
+        eventChannel.setStreamHandler(instance)
     }
-  }
 
-  /// Live stream of RGBA color updates from native macOS picker.
-  static Stream<Map<dynamic, dynamic>> get onColorChanged {
-    return _eventChannel.receiveBroadcastStream().cast<Map<dynamic, dynamic>>();
-  }
+    public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        switch call.method {
+        case "showColorPicker":
+            showColorPicker()
+            result(nil) // acknowledge method call
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
+    private func showColorPicker() {
+        DispatchQueue.main.async {
+            let colorPanel = NSColorPanel.shared
+            colorPanel.setTarget(self)
+            colorPanel.setAction(#selector(self.colorChanged(_:)))
+            colorPanel.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    @objc private func colorChanged(_ sender: NSColorPanel) {
+        guard let sink = eventSink else { return }
+        guard let color = sender.color.usingColorSpace(.deviceRGB) else { return }
+
+        let colorDict: [String: Any] = [
+            "red": color.redComponent,
+            "green": color.greenComponent,
+            "blue": color.blueComponent,
+            "alpha": color.alphaComponent
+        ]
+
+        sink(colorDict)
+    }
+}
+
+@available(macOS 10.15, *)
+extension NativeIosColorPickerPlugin: FlutterStreamHandler {
+    public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
+        return nil
+    }
+
+    public func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        self.eventSink = nil
+        return nil
+    }
 }
