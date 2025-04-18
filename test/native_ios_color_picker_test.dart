@@ -11,8 +11,23 @@ class _TestMockStreamHandler implements MockStreamHandler {
   _TestMockStreamHandler(this.controller);
 
   @override
-  void onListen(dynamic arguments, MockStreamHandlerEventSink events) { // Correct sink type
-    controller.stream.listen(events.success, onError: events.error, onDone: events.endOfStream);
+  void onListen(dynamic arguments, MockStreamHandlerEventSink events) {
+    // Define a compatible error handler
+    void handleError(Object error, [StackTrace? stackTrace]) {
+      // Map the error to the structure expected by MockStreamHandlerEventSink.error
+      // You might want to customize this based on expected error types
+      final String errorCode = error is PlatformException ? error.code : 'STREAM_ERROR';
+      final String? errorMessage = error is PlatformException ? error.message : error.toString();
+      final dynamic errorDetails = error is PlatformException ? error.details : null;
+
+      events.error(code: errorCode, message: errorMessage, details: errorDetails);
+    }
+
+    controller.stream.listen(
+      events.success, // Pass data directly
+      onError: handleError, // Use the compatible error handler
+      onDone: events.endOfStream // Signal completion
+    );
   }
 
   @override
@@ -145,10 +160,10 @@ void main() {
 
       final flutterColor = color.toColor();
 
-      expect(flutterColor.red, 128); // 0.5 * 255 = 127.5 ≈ 128
-      expect(flutterColor.green, 77); // 0.3 * 255 = 76.5 ≈ 77
-      expect(flutterColor.blue, 179); // 0.7 * 255 = 178.5 ≈ 179
-      expect(flutterColor.alpha, 255); // 1.0 * 255 = 255
+      expect(flutterColor.r, 128); // 0.5 * 255 = 127.5 ≈ 128
+      expect(flutterColor.g, 77); // 0.3 * 255 = 76.5 ≈ 77
+      expect(flutterColor.b, 179); // 0.7 * 255 = 178.5 ≈ 179
+      expect(flutterColor.a, 255); // 1.0 * 255 = 255
     });
 
     test('converts to map correctly', () {
