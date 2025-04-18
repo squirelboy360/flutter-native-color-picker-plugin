@@ -160,10 +160,11 @@ void main() {
 
       final flutterColor = color.toColor();
 
-      expect(flutterColor.r, 128); // 0.5 * 255 = 127.5 ≈ 128
-      expect(flutterColor.g, 77); // 0.3 * 255 = 76.5 ≈ 77
-      expect(flutterColor.b, 179); // 0.7 * 255 = 178.5 ≈ 179
-      expect(flutterColor.a, 255); // 1.0 * 255 = 255
+      // Define the expected Flutter Color object
+      const expectedFlutterColor = Color.fromARGB(255, 128, 77, 179);
+
+      // Compare the entire Color object
+      expect(flutterColor, equals(expectedFlutterColor));
     });
 
     test('converts to map correctly', () {
